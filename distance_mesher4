@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Tank Silt Level Dashboard 🌊</title>
+<style>
+  html, body {
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    background: linear-gradient(135deg, #001020, #002a40, #004060);
+    color: white;
+    font-family: "Segoe UI", Arial, sans-serif;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  h1 {
+    margin-top: 30px;
+    font-size: 36px;
+    color: #0ff;
+    text-shadow: 2px 2px 8px #000, 0 0 10px #0ff;
+    font-weight: bold;
+  }
+
+  h1 span {
+    color: #ff0;
+    text-shadow: 2px 2px 10px #000, 0 0 20px #ff0;
+  }
+
+  #connectBox {
+    margin: 20px auto;
+    background: rgba(0,0,0,0.6);
+    padding: 16px 20px;
+    border-radius: 16px;
+    width: 480px;
+    box-shadow: 0 0 30px #0ff inset, 0 0 15px #0ff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    transition: 0.3s;
+  }
+
+  #connectBox:hover {
+    box-shadow: 0 0 40px #0ff inset, 0 0 25px #0ff;
+  }
+
+  input {
+    width: 240px;
+    padding: 8px;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    text-align: center;
+    background: rgba(255,255,255,0.1);
+    color: #0ff;
+    transition: 0.3s;
+  }
+
+  button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg,#0ff,#00a);
+    color: #001020;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 16px;
+    box-shadow: 0 0 10px #0ff, 0 0 20px #0ff inset;
+  }
+
+  #output {
+    margin-top: 15px;
+    font-size: 22px;
+    color: #ff0;
+    font-weight: bold;
+    text-shadow: 2px 2px 8px #000, 0 0 10px #ff0;
+  }
+
+  /* Status Box */
+  #levelStatus {
+    margin-top: 10px;
+    font-size: 26px;
+    font-weight: bold;
+    padding: 10px 16px;
+    display: inline-block;
+    border-radius: 10px;
+    text-shadow: 0 0 6px #000;
+  }
+
+  .low {
+    color: #ff4444;
+    background: rgba(255,0,0,0.2);
+    border: 2px solid #ff4444;
+    box-shadow: 0 0 15px #ff4444;
+  }
+
+  .normal {
+    color: #00ff88;
+    background: rgba(0,255,120,0.2);
+    border: 2px solid #00ff88;
+    box-shadow: 0 0 15px #00ff88;
+  }
+
+  .high {
+    color: #ffaa00;
+    background: rgba(255,170,0,0.2);
+    border: 2px solid #ffaa00;
+    box-shadow: 0 0 15px #ffaa00;
+  }
+
+  canvas {
+    display: block;
+    margin: 30px auto;
+    background: linear-gradient(to top, #001820, #003040);
+    border-radius: 16px;
+    border: 3px solid #0ff;
+    width: 90%;
+    max-width: 1000px;
+    height: 60vh;
+  }
+</style>
+</head>
+<body>
+
+<h1>Tank Silt Level <span>Dashboard</span></h1>
+
+<div id="connectBox">
+  <input id="wsUrl" value="ws://172.20.10.2:8080" placeholder="WebSocket URL">
+  <button id="connectBtn">Connect</button>
+  <button id="disconnectBtn">Disconnect</button>
+  <span id="status">🔴 Disconnected</span>
+</div>
+
+<div id="output">Waiting for data...</div>
+
+<div id="levelStatus">---</div>
+
+<canvas id="depthCanvas"></canvas>
+
+<script>
+let ws;
+const canvas = document.getElementById("depthCanvas");
+const ctx = canvas.getContext("2d");
+
+let history = [];
+const maxHistory = 50;
+
+// NEW LIMITS
+const lowLimit = 50;     // below 50 → LOW
+const highLimit = 60;    // above 60 → HIGH (NORMAL line drawn here)
+
+function resizeCanvas(){
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  drawDepth();
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+document.getElementById("connectBtn").addEventListener("click", () => {
+  const url = document.getElementById("wsUrl").value;
+  ws = new WebSocket(url);
+
+  ws.onopen = () => { document.getElementById("status").innerText = "🟢 Connected"; };
+  ws.onclose = () => { document.getElementById("status").innerText = "🔴 Disconnected"; };
+
+  ws.onmessage = (msg) => {
+    const data = JSON.parse(msg.data);
+    const depth = data.d1;
+
+    history.push(depth);
+    if(history.length > maxHistory) history.shift();
+
+    document.getElementById("output").innerText = `Depth: ${depth} cm`;
+    updateStatus(depth);
+    drawDepth();
+  };
+});
+
+document.getElementById("disconnectBtn").addEventListener("click", () => {
+  if(ws) ws.close();
+  document.getElementById("status").innerText = "🔴 Disconnected";
+});
+
+function updateStatus(depth){
+  let box = document.getElementById("levelStatus");
+
+  if(depth < lowLimit){
+    box.className = "low";
+    box.innerText = "LOW LEVEL ⚠ (Below 50 cm)";
+  }
+  else if(depth > highLimit){
+    box.className = "high";
+    box.innerText = "HIGH LEVEL ⚠ (Above 60 cm)";
+  }
+  else{
+    box.className = "normal";
+    box.innerText = "NORMAL LEVEL ✓ (50–60 cm)";
+  }
+}
+
+function drawDepth() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(history.length == 0) return;
+
+  const maxDepth = Math.max(...history, highLimit);
+  const minDepth = Math.min(...history, lowLimit);
+  const margin = canvas.height * 0.1;
+
+  // Graph
+  ctx.strokeStyle = "#00ffff";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+
+  history.forEach((d,i)=>{
+    const x = i * (canvas.width / maxHistory);
+    const y = canvas.height - margin - ((d - minDepth)/(maxDepth-minDepth))*(canvas.height - 2*margin);
+    if(i==0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // NEW RED NORMAL LINE (60 cm)
+  const normalY = canvas.height - margin - ((highLimit - minDepth)/(maxDepth-minDepth))*(canvas.height - 2*margin);
+
+  ctx.strokeStyle = "red";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, normalY);
+  ctx.lineTo(canvas.width, normalY);
+  ctx.stroke();
+
+  ctx.fillStyle = "red";
+  ctx.font = "18px Segoe UI";
+  ctx.fillText("Normal Upper Limit (60 cm)", canvas.width - 260, normalY - 10);
+}
+</script>
+
+</body>
+</html>
