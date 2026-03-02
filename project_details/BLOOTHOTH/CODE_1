@@ -1,0 +1,75 @@
+No problem — you just need to install **screen** first.
+
+---
+
+# ✅ Step 1 — Install screen
+
+Run this:
+
+```bash
+sudo apt install screen
+```
+
+Enter your password if asked.
+
+---
+
+# ✅ Step 2 — Open Bluetooth Console
+
+After installation, run:
+
+```bash
+screen /dev/rfcomm0 115200
+```
+
+You will now enter the Bluetooth console.
+
+---
+
+# ✅ Step 3 — Send commands to ESP32
+
+Inside screen, type:
+
+```
+F
+```
+
+(press ENTER)
+
+```
+B
+```
+
+(ENTER)
+
+```
+S
+```
+
+(ENTER)
+
+```
+speed:200
+```
+
+(ENTER)
+
+Your motors should respond immediately.
+
+---
+
+# 🛑 To exit screen
+
+Press:
+
+```
+Ctrl + A
+K
+```
+
+Then press **Y**.
+
+---
+
+If you want, I can give you a **better, easier GUI controller** so you don’t need to type commands.
+

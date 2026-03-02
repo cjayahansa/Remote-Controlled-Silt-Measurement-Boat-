@@ -1,0 +1,20 @@
+cjayahansa@pop-os:~$ sudo rfcomm connect rfcomm0 B4:8A:0A:B4:0C:92
+[sudo] password for cjayahansa: 
+Sorry, try again.
+[sudo] password for cjayahansa: 
+Connected /dev/rfcomm0 to B4:8A:0A:B4:0C:92 on channel 1
+Press CTRL-C for hangup
+F
+speed:150
+F
+Disconnected
+cjayahansa@pop-os:~$  sudo rfcomm connect rfcomm0 B4:8A:0A:B4:0C:92
+Connected /dev/rfcomm0 to B4:8A:0A:B4:0C:92 on channel 1
+Press CTRL-C for hangup
+screen /dev/rfcomm0 115200
+
+
+this bloototh controll and open blootooth app and select connect and select serial port 
+and add open the terminal right screen /dev/rfcomm0 115200 this and pass the values
+
+

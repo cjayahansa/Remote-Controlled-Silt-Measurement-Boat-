@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Tank Silt Level Dashboard 🌊</title>
+
+<style>
+html, body {
+  margin:0;
+  padding:0;
+  width:100%;
+  height:100%;
+  background: linear-gradient(135deg, #001020, #002a40, #004060);
+  color: white;
+  font-family: "Segoe UI", Arial, sans-serif;
+  text-align: center;
+}
+
+h1 {
+  margin: 20px 0 10px;
+  font-size: 36px;
+  color: #0ff;
+}
+h1 span { color: #ff0; }
+
+/* BOXES */
+#connectBox, #limitBox {
+  margin: 10px auto;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+input {
+  width: 130px;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  text-align: center;
+  background: rgba(255,255,255,0.15);
+  color: #0ff;
+}
+
+button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg,#0ff,#00a);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#output {
+  font-size: 22px;
+  margin-top: 10px;
+  color: #ff0;
+}
+
+#levelStatus {
+  margin-top: 10px;
+  font-size: 26px;
+  font-weight: bold;
+  padding: 10px 16px;
+  border-radius: 10px;
+}
+
+.low    { color:#ff4444; }
+.normal { color:#00ff88; }
+.high   { color:#ffaa00; }
+
+/* CANVAS */
+#canvasWrap {
+  width: 95vw;
+  height: 70vh;
+  margin: auto;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  border: 3px solid #0ff;
+  border-radius: 16px;
+  background: linear-gradient(to top, #001820, #003040);
+}
+</style>
+</head>
+
+<body>
+
+<h1>Tank Silt Level <span>Dashboard</span></h1>
+
+<div id="connectBox">
+  <input id="wsUrl" value="ws://172.20.10.2:8080">
+  <button id="connectBtn">Connect</button>
+  <button id="disconnectBtn">Disconnect</button>
+  <span id="status">🔴 Disconnected</span>
+</div>
+
+<div id="limitBox">
+  <input id="lowInput" type="number" value="15">
+  <input id="highInput" type="number" value="40">
+  <button id="updateLimitsBtn">Update Limits</button>
+</div>
+
+<div id="output">Waiting for data...</div>
+<div id="levelStatus">---</div>
+
+<div id="canvasWrap">
+  <canvas id="depthCanvas"></canvas>
+</div>
+
+<script>
+let ws;
+const canvas = document.getElementById("depthCanvas");
+const ctx = canvas.getContext("2d");
+
+let history = [];
+const maxHistory = 120;
+
+let lowLimit = 15;
+let highLimit = 40;
+
+/* PERFECT CANVAS RESIZE */
+function resizeCanvas(){
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  drawGraph();
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+/* CONNECT WEBSOCKET */
+document.getElementById("connectBtn").onclick = () => {
+  const url = document.getElementById("wsUrl").value;
+  ws = new WebSocket(url);
+
+  ws.onopen = () => status.innerText = "🟢 Connected";
+  ws.onclose = () => status.innerText = "🔴 Disconnected";
+
+  ws.onmessage = (msg) => {
+    try {
+      const data = JSON.parse(msg.data);
+      const depth = Number(data.d1);
+         // <-- WebSocket value
+
+      if (isNaN(depth)) return;
+
+      history.push(depth);
+      if (history.length > maxHistory) history.shift();
+
+      document.getElementById("output").innerText =
+        `Depth: ${depth.toFixed(1)} cm`;
+
+      updateStatus(depth);
+      drawGraph();
+    } catch(e){
+      console.log("Invalid data", msg.data);
+    }
+  };
+};
+
+document.getElementById("disconnectBtn").onclick = () => {
+  if(ws) ws.close();
+  status.innerText = "🔴 Disconnected";
+};
+
+/* UPDATE LIMITS */
+document.getElementById("updateLimitsBtn").onclick = () => {
+  lowLimit = parseFloat(lowInput.value);
+  highLimit = parseFloat(highInput.value);
+  drawGraph();
+  if(history.length) updateStatus(history[history.length-1]);
+};
+
+/* STATUS */
+function updateStatus(d){
+  if(d < lowLimit){
+    levelStatus.className="low";
+    levelStatus.innerText="LOW LEVEL ⚠";
+  }
+  else if(d > highLimit){
+    levelStatus.className="high";
+    levelStatus.innerText="HIGH LEVEL ⚠";
+  }
+  else{
+    levelStatus.className="normal";
+    levelStatus.innerText="NORMAL LEVEL ✓";
+  }
+}
+
+/* GRAPH */
+function drawGraph(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(history.length < 2) return;
+
+  const maxVal = Math.max(...history, highLimit);
+  const minVal = Math.min(...history, lowLimit);
+  const pad = canvas.height * 0.1;
+
+  /* DATA LINE */
+  ctx.strokeStyle="#00ffff";
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  history.forEach((v,i)=>{
+    const x = i*(canvas.width/maxHistory);
+    const y = canvas.height-pad - ((v-minVal)/(maxVal-minVal))*(canvas.height-2*pad);
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  });
+  ctx.stroke();
+
+  drawLimit(highLimit,"red","HIGH");
+  drawLimit(lowLimit,"lime","LOW");
+}
+
+function drawLimit(val,color,label){
+  const maxVal = Math.max(...history, highLimit);
+  const minVal = Math.min(...history, lowLimit);
+  const pad = canvas.height * 0.1;
+  const y = canvas.height-pad - ((val-minVal)/(maxVal-minVal))*(canvas.height-2*pad);
+
+  ctx.strokeStyle=color;
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(0,y);
+  ctx.lineTo(canvas.width,y);
+  ctx.stroke();
+
+  ctx.fillStyle=color;
+  ctx.font="16px Segoe UI";
+  ctx.fillText(`${label} ${val}cm`,10,y-6);
+}
+</script>
+
+</body>
+</html>
+

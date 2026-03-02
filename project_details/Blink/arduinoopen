@@ -1,0 +1,53 @@
+sudo mv ~/Desktop/arduino-ide_2.3.6_Linux_64bit.AppImage /opt/arduino/
+cd /opt/arduino/
+./arduino-ide_2.3.6_Linux_64bit.AppImage
+-------------------------------------------------------------
+cjayahansa@pop-os:~$ python3 -m pip install pyserial esptool
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: pyserial in /usr/lib/python3/dist-packages (3.5)
+Requirement already satisfied: esptool in ./.local/lib/python3.10/site-packages (4.7.0)
+Requirement already satisfied: cryptography>=2.1.4 in /usr/lib/python3/dist-packages (from esptool) (3.4.8)
+Requirement already satisfied: bitstring>=3.1.6 in ./.local/lib/python3.10/site-packages (from esptool) (4.3.1)
+Requirement already satisfied: PyYAML>=5.1 in /usr/lib/python3/dist-packages (from esptool) (5.4.1)
+Requirement already satisfied: intelhex in ./.local/lib/python3.10/site-packages (from esptool) (2.3.0)
+Requirement already satisfied: reedsolo<1.8,>=1.5.3 in ./.local/lib/python3.10/site-packages (from esptool) (1.7.0)
+Requirement already satisfied: ecdsa>=0.16.0 in ./.local/lib/python3.10/site-packages (from esptool) (0.19.1)
+Requirement already satisfied: bitarray<4.0,>=3.0.0 in ./.local/lib/python3.10/site-packages (from bitstring>=3.1.6->esptool) (3.8.0)
+Requirement already satisfied: six>=1.9.0 in /usr/lib/python3/dist-packages (from ecdsa>=0.16.0->esptool) (1.16.0)
+cjayahansa@pop-os:~$ pip3 install pyserial esptool
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: pyserial in /usr/lib/python3/dist-packages (3.5)
+Requirement already satisfied: esptool in ./.local/lib/python3.10/site-packages (4.7.0)
+Requirement already satisfied: bitstring>=3.1.6 in ./.local/lib/python3.10/site-packages (from esptool) (4.3.1)
+Requirement already satisfied: reedsolo<1.8,>=1.5.3 in ./.local/lib/python3.10/site-packages (from esptool) (1.7.0)
+Requirement already satisfied: PyYAML>=5.1 in /usr/lib/python3/dist-packages (from esptool) (5.4.1)
+Requirement already satisfied: cryptography>=2.1.4 in /usr/lib/python3/dist-packages (from esptool) (3.4.8)
+Requirement already satisfied: ecdsa>=0.16.0 in ./.local/lib/python3.10/site-packages (from esptool) (0.19.1)
+Requirement already satisfied: intelhex in ./.local/lib/python3.10/site-packages (from esptool) (2.3.0)
+Requirement already satisfied: bitarray<4.0,>=3.0.0 in ./.local/lib/python3.10/site-packages (from bitstring>=3.1.6->esptool) (3.8.0)
+Requirement already satisfied: six>=1.9.0 in /usr/lib/python3/dist-packages (from ecdsa>=0.16.0->esptool) (1.16.0)
+cjayahansa@pop-os:~$ sudo ln -s /usr/bin/python3 /usr/bin/python
+[sudo] password for cjayahansa: 
+cjayahansa@pop-os:~$ sudo apt update
+sudo apt install python3 python3-pip
+Hit:1 https://dl.google.com/linux/chrome/deb stable InRelease                  
+Hit:2 http://apt.pop-os.org/proprietary jammy InRelease                        
+Hit:3 https://packages.microsoft.com/repos/code stable InRelease    
+Hit:4 http://packages.ros.org/ros2/ubuntu jammy InRelease           
+Hit:5 http://apt.pop-os.org/release jammy InRelease
+Hit:6 http://apt.pop-os.org/ubuntu jammy InRelease
+Hit:7 http://apt.pop-os.org/ubuntu jammy-security InRelease
+Hit:8 http://apt.pop-os.org/ubuntu jammy-updates InRelease
+Hit:9 http://apt.pop-os.org/ubuntu jammy-backports InRelease
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+308 packages can be upgraded. Run 'apt list --upgradable' to see them.
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+python3-pip is already the newest version (22.0.2+dfsg-1ubuntu0.7).
+python3 is already the newest version (3.10.6-1~22.04.1).
+0 upgraded, 0 newly installed, 0 to remove and 308 not upgraded.
+cjayahansa@pop-os:~$ 
+

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Tank Silt Level Monitoring Dashboard</title>
+<style>
+  /* --- Body & Fonts --- */
+  html, body {
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    background: linear-gradient(to bottom, #001020, #003040);
+    color: white;
+    font-family: "Segoe UI", Arial, sans-serif;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  h2 {
+    margin-top: 20px;
+    font-size: 28px;
+    text-shadow: 2px 2px 5px #000;
+  }
+
+  /* --- Connection Box --- */
+  #connectBox {
+    margin: 10px auto;
+    background: #111;
+    padding: 12px;
+    border-radius: 12px;
+    width: 400px;
+    box-shadow: 0 0 20px #0ff inset, 0 0 10px #0ff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  input {
+    width: 220px;
+    padding: 6px;
+    border-radius: 6px;
+    border: none;
+    outline: none;
+    font-size: 14px;
+  }
+
+  button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    background-color: #0ff;
+    color: #001020;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  button:hover {
+    background-color: #0aa;
+    color: #fff;
+  }
+
+  #status {
+    margin-left: 10px;
+    font-weight: bold;
+  }
+
+  /* --- Output Box --- */
+  #output {
+    margin-top: 15px;
+    font-size: 18px;
+    color: #0ff;
+    font-weight: bold;
+    text-shadow: 1px 1px 5px #000;
+  }
+
+  /* --- Canvas --- */
+  canvas {
+    display: block;
+    margin: 20px auto;
+    background: #001820;
+    border-radius: 12px;
+    border: 2px solid #0ff;
+    box-shadow: 0 0 15px #0ff inset;
+    width: 90%;
+    max-width: 1000px;
+    height: 60vh;
+  }
+</style>
+</head>
+<body>
+
+<h2>Tank Silt Level Monitoring Dashboard</h2>
+
+<div id="connectBox">
+  <input id="wsUrl" value="ws://172.20.10.2:8080">
+  <button onclick="connectWS()">Connect</button>
+  <span id="status">🔴 Disconnected</span>
+</div>
+
+<div id="output">Waiting for data...</div>
+
+<canvas id="depthCanvas"></canvas>
+
+<script>
+let ws;
+const canvas = document.getElementById("depthCanvas");
+const ctx = canvas.getContext("2d");
+
+// Store last N depth values
+let history = [];
+const maxHistory = 50;
+
+// Handle window resize
+function resizeCanvas(){
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  drawDepth();
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Connect to WebSocket
+function connectWS() {
+  const url = document.getElementById("wsUrl").value;
+  ws = new WebSocket(url);
+
+  ws.onopen = () => { document.getElementById("status").innerText = "🟢 Connected"; };
+  ws.onclose = () => { document.getElementById("status").innerText = "🔴 Disconnected"; };
+
+  ws.onmessage = (msg) => {
+    const data = JSON.parse(msg.data);
+    const depth = data.d1; // choose main sensor
+
+    history.push(depth);
+    if(history.length > maxHistory) history.shift();
+
+    document.getElementById("output").innerText = `Depth: ${depth} cm`;
+    drawDepth();
+  };
+}
+
+// Draw depth graph
+function drawDepth() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if(history.length == 0) return;
+
+  // --- Grid background ---
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 1;
+  for(let y=0; y<canvas.height; y+=canvas.height/8){
+    ctx.beginPath();
+    ctx.moveTo(0,y);
+    ctx.lineTo(canvas.width,y);
+    ctx.stroke();
+  }
+
+  // --- Scale and center graph ---
+  const maxDepth = Math.max(...history);
+  const minDepth = Math.min(...history);
+  const depthRange = Math.max(maxDepth - minDepth, 1); // avoid divide by zero
+  const margin = canvas.height * 0.1; // top/bottom margin
+
+  ctx.strokeStyle = "#0ff";
+  ctx.lineWidth = 3;
+  ctx.shadowColor = "#0ff";
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+
+  history.forEach((d,i)=>{
+    const x = i * (canvas.width / maxHistory);
+    const y = canvas.height - margin - ((d - minDepth)/depthRange)*(canvas.height - 2*margin);
+    if(i==0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // --- Last depth point glow ---
+  const lastVal = history[history.length-1];
+  const lastX = canvas.width - (canvas.width/maxHistory);
+  const lastY = canvas.height - margin - ((lastVal - minDepth)/depthRange)*(canvas.height - 2*margin);
+  ctx.fillStyle = "#ff0";
+  ctx.shadowColor = "#ff0";
+  ctx.shadowBlur = 15;
+  ctx.beginPath();
+  ctx.arc(lastX,lastY,8,0,2*Math.PI);
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+}
+</script>
+
+</body>
+</html>
+

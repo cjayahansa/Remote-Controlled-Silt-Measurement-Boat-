@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tank Silt Level Dashboard 🌊</title>
+
+<style>
+html, body {
+  margin:0;
+  padding:0;
+  width:100%;
+  height:100%;
+  background: linear-gradient(135deg, #001020, #002a40, #004060);
+  color: white;
+  font-family: "Segoe UI", Arial, sans-serif;
+  text-align: center;
+}
+
+h1 {
+  margin: 20px 0 10px;
+  font-size: 34px;
+  color: #0ff;
+}
+h1 span { color: #ff0; }
+
+#connectBox, #limitBox {
+  margin: 10px auto;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+input {
+  width: 110px;
+  padding: 7px;
+  border-radius: 8px;
+  border: none;
+  text-align: center;
+  background: rgba(255,255,255,0.15);
+  color: #0ff;
+}
+
+button {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg,#0ff,#00a);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#output {
+  font-size: 20px;
+  margin-top: 8px;
+  color: #ff0;
+}
+
+#levelStatus {
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.low    { color:#00ccff; }
+.normal { color:#ffaa00; }
+.high   { color:#ff4444; }
+
+#canvasWrap {
+  width: 95vw;
+  height: 70vh;
+  margin: auto;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  border: 3px solid #0ff;
+  border-radius: 16px;
+  background: linear-gradient(to bottom, #001820, #003040);
+}
+</style>
+</head>
+
+<body>
+
+<h1>Tank Silt Level <span>Dashboard</span></h1>
+
+<div id="connectBox">
+  <input id="wsUrl" value="ws://172.20.10.2:8080">
+  <button id="connectBtn">Connect</button>
+  <button id="disconnectBtn">Disconnect</button>
+  <span id="status">🔴 Disconnected</span>
+</div>
+
+<div id="limitBox">
+  <input id="highInput"   type="number" value="0"  placeholder="High">
+  <input id="normalInput" type="number" value="35" placeholder="Normal">
+  <input id="lowInput"    type="number" value="79" placeholder="Low">
+  <button id="updateLimitsBtn">Update</button>
+</div>
+
+<div id="output">Waiting for data...</div>
+<div id="levelStatus">---</div>
+
+<div id="canvasWrap">
+  <canvas id="depthCanvas"></canvas>
+</div>
+
+<script>
+let ws;
+const canvas = document.getElementById("depthCanvas");
+const ctx = canvas.getContext("2d");
+
+let history = [];
+const maxHistory = 120;
+
+let highLevel   = 0;
+let normalLevel = 35;
+let lowLevel    = 79;
+
+/* CANVAS RESIZE */
+function resizeCanvas(){
+  const r = canvas.getBoundingClientRect();
+  canvas.width = r.width;
+  canvas.height = r.height;
+  drawGraph();
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+/* WEBSOCKET */
+connectBtn.onclick = () => {
+  ws = new WebSocket(wsUrl.value);
+
+  ws.onopen  = () => status.innerText = "🟢 Connected";
+  ws.onclose = () => status.innerText = "🔴 Disconnected";
+
+  ws.onmessage = e => {
+    const d = Number(JSON.parse(e.data).d1);
+    if(isNaN(d)) return;
+
+    history.push(d);
+    if(history.length > maxHistory) history.shift();
+
+    output.innerText = `Depth: ${d.toFixed(1)} cm`;
+    updateStatus(d);
+    drawGraph();
+  };
+};
+
+disconnectBtn.onclick = () => {
+  if(ws) ws.close();
+  status.innerText = "🔴 Disconnected";
+};
+
+/* UPDATE LEVELS */
+updateLimitsBtn.onclick = () => {
+  highLevel   = Number(highInput.value);
+  normalLevel = Number(normalInput.value);
+  lowLevel    = Number(lowInput.value);
+  drawGraph();
+};
+
+/* STATUS LOGIC */
+function updateStatus(d){
+  if(d <= highLevel){
+    levelStatus.className = "high";
+    levelStatus.innerText = "HIGH LEVEL";
+  }
+  else if(d <= normalLevel){
+    levelStatus.className = "normal";
+    levelStatus.innerText = "NORMAL LEVEL";
+  }
+  else{
+    levelStatus.className = "low";
+    levelStatus.innerText = "LOW LEVEL";
+  }
+}
+
+/* GRAPH */
+function drawGraph(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(history.length < 2) return;
+
+  const maxVal = Math.max(...history, lowLevel);
+  const pad = canvas.height * 0.1;
+
+  /* DATA LINE */
+  ctx.strokeStyle="#00ffff";
+  ctx.lineWidth=3;
+  ctx.beginPath();
+
+  history.forEach((v,i)=>{
+    const x = i * (canvas.width / maxHistory);
+    const y = pad + (v / maxVal) * (canvas.height - 2*pad);
+    i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+  });
+
+  ctx.stroke();
+
+  drawLimit(highLevel,   "#ff4444", "HIGH");
+  drawLimit(normalLevel, "#ffaa00", "NORMAL", true);
+  drawLimit(lowLevel,    "#00ccff", "LOW");
+}
+
+/* LIMIT LINE */
+function drawLimit(val,color,label,dashed=false){
+  const maxVal = Math.max(...history, lowLevel);
+  const pad = canvas.height * 0.1;
+  const y = pad + (val / maxVal) * (canvas.height - 2*pad);
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 4;
+  ctx.setLineDash(dashed ? [6,6] : []);
+  ctx.beginPath();
+  ctx.moveTo(0,y);
+  ctx.lineTo(canvas.width,y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  /* SMALL TEXT */
+  ctx.fillStyle = color;
+  ctx.font = "16px Segoe UI";
+  ctx.fillText(`${label}: ${val}cm`, 8, y - 4);
+}
+</script>
+
+</body>
+</html>
+

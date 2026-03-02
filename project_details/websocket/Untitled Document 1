@@ -1,0 +1,56 @@
+#include <WiFi.h>
+#include <WebSocketsServer.h>
+
+const char* ssid = "Your_WiFi_Name";
+const char* password = "Your_WiFi_Password";
+
+WebSocketsServer webSocket = WebSocketsServer(8080);
+
+const int ledPin = 2;
+
+// ---------- WebSocket Events ----------
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+
+  switch (type) {
+
+    case WStype_CONNECTED:
+      Serial.println("Client connected");
+      break;
+
+    case WStype_TEXT:
+      if (strcmp((char*)payload, "ON") == 0) {
+        digitalWrite(ledPin, HIGH);
+      }
+      else if (strcmp((char*)payload, "OFF") == 0) {
+        digitalWrite(ledPin, LOW);
+      }
+      break;
+
+    case WStype_DISCONNECTED:
+      Serial.println("Client disconnected");
+      break;
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+  }
+
+  Serial.print("ESP32 IP: ");
+  Serial.println(WiFi.localIP());
+
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
+}
+
+void loop() {
+  webSocket.loop();
+}
+
